@@ -6,8 +6,8 @@
 #include <sstream>
 #include <time.h>
 #include <random>
-#define RAND_ITRS    401234
-//#define RAND_ITRS    41
+//#define RAND_ITRS    401234
+#define RAND_ITRS    4
 #define VERTICES_NUM 200
 using namespace std;
 
@@ -176,6 +176,21 @@ class list {
                                 }
                         }
                 }
+                int remove_one_edge() {
+			int removed_edge_v2 = 0;
+                        // uninitialized list
+                        if (head == NULL) {
+                                return removed_edge_v2;
+                        }
+
+                        // initialized list
+			removed_edge_v2   = head->node_edge.v2;
+                        node * curr_node  = head;
+                        // in case head is the req_edge
+                        head              = curr_node->next;
+                        delete curr_node;
+			return removed_edge_v2;
+                }
                 void delete_list() {
                         //uninitialized list
                         if (head == NULL) {
@@ -250,6 +265,9 @@ class vertex {
                 int count() {
                         return edges.count();
                 }
+                int remove_one_edge() {
+                        return edges.remove_one_edge();
+                }
 //		vertex operator= (vertex v_to_cp) {
 //			this->edges = v_to_cp.edges;
 //			return *this;
@@ -262,6 +280,8 @@ int main() {
         int i;
         bool valid_vertices[VERTICES_NUM + 1];
         int * min_cuts = new int[RAND_ITRS];
+        int * s        = new int[RAND_ITRS];
+        int * d        = new int[RAND_ITRS];
 
         // get the vertices
         for (i = 1; i <= VERTICES_NUM; i++) {
@@ -307,35 +327,25 @@ int main() {
                         v1 = 0;
                         v2 = 0;
                         // pick a random edge
-                        while (!(v1 && valid_vertices[v1])) {
+                        while (!(valid_vertices[v1])) {
                                 v1 = distr(eng);
+//				v1 = rand() % VERTICES_NUM + 1;
                         }
-                        while (!(v2 && valid_vertices[v2] && (v1 != v2))) {
+                        while (!(valid_vertices[v2] && (v1 != v2))) {
                                 v2 = distr(eng);
-                        }
-                        if (v1 == v2) {
-                                cout<<"ERROR: v1 == v2\n";
-				exit(1);
-                        }
-                        else if (!valid_vertices[v1] || !valid_vertices[v2]) {
-                                cout<<"ERROR: v1 or v2 not valid\n";
-				exit(1);
-                        }
+//       				v2 = rand() % VERTICES_NUM + 1;
+	                }
                 //        cout<<itr<<"Edge to remove: v1 = "<<v1<<", v2 = "<<v2<<endl;
                         v[v2].remove_edge(v2, v1);
-                        valid_vertices[v1] = 0;
+                        v[v1].remove_edge(v1, v2);
+                        valid_vertices[v1]  = 0;
+			int removed_edge_v = v[v1].remove_one_edge();
+			while (removed_edge_v) {
+				v[removed_edge_v].replace_edge(removed_edge_v, v1, removed_edge_v, v2);
+				v[v2].insert_edge(v2, removed_edge_v);
+				removed_edge_v = v[v1].remove_one_edge();
+			};
                         v[v1].delete_edges();
-                //      cout<<itr<<"Replace any vetex connected to v1 by v2\n";
-                        for (i = 1; i <= VERTICES_NUM; i++) {
-                                if (!valid_vertices[i]) {
-                                        continue;
-                                }
-                                int valid_replace = v[i].replace_edge(i, v1, i, v2);
-                                while (valid_replace) {
-                                        v[v2].insert_edge(v2, i);
-                                        valid_replace--;
-                                }
-                        }       
                 }
         //      cout<<"After replace:\n";
                 v1 = 0;
@@ -348,7 +358,12 @@ int main() {
                                 }
                                 else if (!v2) {
                                         v2 = i;
+					break;
                                 }
+//				else {
+//					cout<<"ERROR: There should be two vertices only at the end\n";
+//					exit(1);
+//				}
 //				valid_vertices_count++;
                         }
                 }
@@ -359,16 +374,22 @@ int main() {
                 v[v1].delete_edges();
                 v[v2].delete_edges();
                 min_cuts[rand_itr] = v1_count;
-}
+		s[rand_itr]        = v1;
+		d[rand_itr]        = v2;
+	}
       cout<<"==================== min_cuts ====================="<<endl;
         int min_cut = 999999;
+	int best_itr;
         for (rand_itr = 0; rand_itr < RAND_ITRS; rand_itr++) {
                 if (min_cuts[rand_itr] < min_cut) {
-                        min_cut = min_cuts[rand_itr]; 
+                        min_cut  = min_cuts[rand_itr]; 
+			best_itr = rand_itr;
                 }
         }
-                cout<<"min_cuts[rand_itr] = "<<min_cuts[rand_itr]<<", min_cut = "<<min_cut<<endl;
+                cout<<"s = "<<s[best_itr]<<", d = "<<d[best_itr]<<", min_cut = "<<min_cuts[best_itr]<<endl;
         delete [] min_cuts;
+        delete [] s;
+        delete [] d;
 	for (i = 1; i < VERTICES_NUM; i++) {
 		v_backup[i].delete_edges();
 	}
